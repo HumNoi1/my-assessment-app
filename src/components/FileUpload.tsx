@@ -1,4 +1,6 @@
-// components/FileUpload.tsx
+// src/components/FileUpload.tsx
+'use client'
+
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 
@@ -32,7 +34,7 @@ export default function FileUpload({
 
   return (
     <div className="mb-6">
-      <label className="block text-gray-700 text-sm font-bold mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
         {label}
       </label>
       <div 

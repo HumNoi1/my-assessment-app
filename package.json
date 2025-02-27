@@ -13,13 +13,16 @@
     "@zilliz/milvus2-sdk-node": "^2.5.5",
     "autoprefixer": "^10.4.20",
     "axios": "^1.8.1",
+    "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "next": "15.2.0",
     "postcss": "^8.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "supabase": "^2.15.8"
+    "react-dropzone": "^14.3.8",
+    "supabase": "^2.15.8",
+    "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
