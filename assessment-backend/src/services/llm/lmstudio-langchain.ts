@@ -1,7 +1,10 @@
-// src/services/llm/lmstudio-langchain.ts
+// assessment-backend/src/services/llm/lmstudio-langchain.ts
 import { LLM } from "langchain/llms/base";
 import { LMStudioService } from "./lmstudio-service";
 
+/**
+ * ตัวแปลงสำหรับใช้ LMStudio กับ LangChain
+ */
 export class LMStudioLLM extends LLM {
   private service: LMStudioService;
   

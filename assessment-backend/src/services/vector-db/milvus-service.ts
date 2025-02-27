@@ -1,50 +1,34 @@
-// src/services/vector-db/milvus-service.ts
+// assessment-backend/src/services/vector-db/milvus-client.ts
 import { MilvusClient } from '@zilliz/milvus2-sdk-node';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-export class MilvusService {
-  private client: MilvusClient;
-  
-  constructor() {
-    this.client = new MilvusClient({
-      address: process.env.MILVUS_ADDRESS!,
-      username: process.env.MILVUS_USERNAME,
-      password: process.env.MILVUS_PASSWORD,
-    });
+// ตรวจสอบว่ามีการกำหนดค่าสภาพแวดล้อมที่จำเป็นหรือไม่
+const requiredEnvVars = ['MILVUS_ADDRESS', 'MILVUS_USERNAME', 'MILVUS_PASSWORD'];
+requiredEnvVars.forEach(envVar => {
+  if (!process.env[envVar]) {
+    console.warn(`Warning: Environment variable ${envVar} is not set`);
   }
-  
-  async search(
-    collectionName: string,
-    vector: number[],
-    limit: number = 5
-  ) {
-    // Search for similar vectors in the collection
-    const res = await this.client.search({
-      collection_name: collectionName,
-      vector: vector,
-      limit: limit,
-      output_fields: ['content_chunk', 'metadata'],
-    });
-    
-    return res.results;
+});
+
+// สร้าง Milvus client instance
+const milvusClient = new MilvusClient({
+  address: process.env.MILVUS_ADDRESS || 'localhost:19530',
+  username: process.env.MILVUS_USERNAME || '',
+  password: process.env.MILVUS_PASSWORD || '',
+});
+
+// ฟังก์ชันสำหรับตรวจสอบการเชื่อมต่อ
+export async function checkMilvusConnection(): Promise<boolean> {
+  try {
+    await milvusClient.listCollections();
+    console.log('Successfully connected to Milvus');
+    return true;
+  } catch (error) {
+    console.error('Failed to connect to Milvus:', error);
+    return false;
   }
-  
-  async insert(
-    collectionName: string,
-    vectors: number[][],
-    fields: Record<string, any>[]
-  ) {
-    // Insert vectors and their associated data into Milvus
-    const res = await this.client.insert({
-      collection_name: collectionName,
-      fields_data: fields,
-      vectors: vectors,
-    });
-    
-    return res;
-  }
-  
-  // Other methods for working with Milvus...
 }
+
+export { milvusClient };
