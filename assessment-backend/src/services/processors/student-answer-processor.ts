@@ -64,7 +64,19 @@ export class StudentAnswerProcessor {
     answerKeyId: string,
     folderId: string,
     contentType: string
-  ): Promise<any> {
+  ): Promise<{
+    student_answer_id: string;
+    file_name: string;
+    content: string;
+    file_path: string;
+    file_size: number;
+    file_type: string;
+    student_id: string;
+    answer_key_id: string;
+    folder_id: string;
+    milvus_collection_name: string;
+    processed: boolean;
+  }> {
     try {
       console.log(`Uploading student answer: ${fileName}`);
       

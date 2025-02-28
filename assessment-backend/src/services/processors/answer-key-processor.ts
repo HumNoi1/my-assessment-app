@@ -63,7 +63,18 @@ export class AnswerKeyProcessor {
     subjectId: string,
     termId: string,
     contentType: string
-  ): Promise<any> {
+  ): Promise<{
+    answer_key_id: string;
+    file_name: string;
+    content: string;
+    file_path: string;
+    file_size: number;
+    file_type: string;
+    subject_id: string;
+    term_id: string;
+    milvus_collection_name: string;
+    processed: boolean;
+  }> {
     try {
       console.log(`Uploading answer key: ${fileName}`);
       

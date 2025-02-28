@@ -109,7 +109,7 @@ export interface Teacher {
     score: number;
     max_score: number;
     feedback_text?: string;
-    feedback_json?: Record<string, any>;
+    feedback_json?: Record<string, unknown>;
     confidence: number;
     is_approved: boolean;
     approved_by?: string;
@@ -204,7 +204,7 @@ export interface Teacher {
     score: number;
     max_score: number;
     feedback_text?: string;
-    feedback_json?: Record<string, any>;
+    feedback_json?: Record<string, unknown>;
     confidence: number;
   }
   

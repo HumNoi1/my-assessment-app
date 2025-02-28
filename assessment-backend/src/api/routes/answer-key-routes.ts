@@ -2,9 +2,9 @@
 import { Router } from 'express';
 import { supabase } from '../../services/supabase/client';
 import multer from 'multer';
-import { answerKeyProcessor } from '../../services/processors/amswer-key-processor';
+import { answerKeyProcessor } from '../../services/processors/answer-key-processor';
 
-const router = Router();
+const router: Router = Router();
 
 // กำหนดค่า multer สำหรับการรับไฟล์
 const storage = multer.memoryStorage();
@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get answer keys by subject ID
-router.get('/subject/:subjectId', async (req, res) => {
+router.get<{ subjectId: string }>('/subject/:subjectId', async (req, res) => {
   try {
     const { subjectId } = req.params;
     const { data, error } = await supabase

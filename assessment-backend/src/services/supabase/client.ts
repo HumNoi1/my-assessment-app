@@ -22,7 +22,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // ฟังก์ชันสำหรับตรวจสอบการเชื่อมต่อ
 export async function checkSupabaseConnection(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.from('teachers').select('count');
+    const { error } = await supabase.from('teachers').select('count');
     if (error) throw error;
     console.log('Successfully connected to Supabase');
     return true;

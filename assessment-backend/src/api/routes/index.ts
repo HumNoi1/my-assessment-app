@@ -10,7 +10,7 @@ import studentAnswerRoutes from './student-answer-routes';
 import assessmentRoutes from './assessment-routes';
 import studentRoutes from './student-routes';
 
-const router = Router();
+const router: Router = Router();
 
 // ลงทะเบียนเส้นทาง API ทั้งหมด
 router.use('/teachers', teacherRoutes);

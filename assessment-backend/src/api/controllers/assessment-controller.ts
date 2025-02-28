@@ -9,7 +9,7 @@ export class AssessmentController {
    * @param req Request
    * @param res Response
    */
-  async analyzeAnswer(req: Request, res: Response) {
+  analyzeAnswer = async (req: Request, res: Response) => {
     try {
       const { id: studentAnswerId } = req.params;
       const { answerKeyId } = req.body;
@@ -53,7 +53,7 @@ export class AssessmentController {
    * @param req Request
    * @param res Response
    */
-  async compareAnswers(req: Request, res: Response) {
+  compareAnswers = async (req: Request, res: Response) => {
     try {
       const { id: studentAnswerId } = req.params;
       const { answerKeyId } = req.body;
@@ -97,7 +97,7 @@ export class AssessmentController {
    * @param req Request
    * @param res Response
    */
-  async approveAssessment(req: Request, res: Response) {
+  approveAssessment = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { teacherId } = req.body;
@@ -137,7 +137,7 @@ export class AssessmentController {
    * @param req Request
    * @param res Response
    */
-  async getAssessment(req: Request, res: Response) {
+  getAssessment = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
@@ -179,7 +179,7 @@ export class AssessmentController {
    * @param req Request
    * @param res Response
    */
-  async getAllAssessments(req: Request, res: Response) {
+  getAllAssessments = async (req: Request, res: Response) => {
     try {
       // รับพารามิเตอร์เพื่อกรอง
       const { is_approved, teacherId, subjectId, studentId, limit } = req.query;

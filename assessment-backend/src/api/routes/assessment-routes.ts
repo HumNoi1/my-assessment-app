@@ -1,22 +1,13 @@
 // assessment-backend/src/api/routes/assessment-routes.ts
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { assessmentController } from '../controllers/assessment-controller';
 
-const router = Router();
+const router: Router = Router();
 
-// GET /api/assessments - ดึงรายการประเมินทั้งหมด
-router.get('/', assessmentController.getAllAssessments);
-
-// GET /api/assessments/:id - ดึงรายละเอียดการประเมิน
-router.get('/:id', assessmentController.getAssessment);
-
-// POST /api/assessments/:id/analyze - วิเคราะห์คำตอบนักเรียน
-router.post('/:id/analyze', assessmentController.analyzeAnswer);
-
-// POST /api/assessments/:id/compare - เปรียบเทียบคำตอบนักเรียนกับเฉลย
-router.post('/:id/compare', assessmentController.compareAnswers);
-
-// PUT /api/assessments/:id/approve - อนุมัติการประเมิน
-router.put('/:id/approve', assessmentController.approveAssessment);
+router.get('/', (req: Request, res: Response) => assessmentController.getAllAssessments(req, res));
+router.get('/:id', (req: Request, res: Response) => assessmentController.getAssessment(req, res));
+router.post('/:id/analyze', (req: Request, res: Response) => assessmentController.analyzeAnswer(req, res));
+router.post('/:id/compare', (req: Request, res: Response) => assessmentController.compareAnswers(req, res));
+router.put('/:id/approve', (req: Request, res: Response) => assessmentController.approveAssessment(req, res));
 
 export default router;

@@ -136,7 +136,7 @@ export class EmbeddingService {
    * @param topK จำนวนผลลัพธ์สูงสุดที่ต้องการ
    * @returns ผลลัพธ์ที่เกี่ยวข้อง
    */
-  public async searchSimilarContent(query: string, collectionName: string, topK: number = 5): Promise<any[]> {
+  public async searchSimilarContent(query: string, collectionName: string, topK: number = 5): Promise<{ content_chunk: string, metadata: string, distance: number }[]> {
     try {
       // สร้าง embedding สำหรับข้อความค้นหา
       const queryEmbedding = await lmStudioService.generateEmbeddings(query);
@@ -150,7 +150,11 @@ export class EmbeddingService {
         params: { metric_type: 'COSINE' }
       });
       
-      return searchResult.results;
+      return searchResult.results.map(result => ({
+        content_chunk: result.content_chunk as string,
+        metadata: result.metadata as string,
+        distance: result.distance
+      }));
     } catch (error) {
       console.error('Error searching similar content:', error);
       return [];

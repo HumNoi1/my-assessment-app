@@ -1,5 +1,5 @@
 // assessment-backend/src/services/vector-db/milvus-collection-setup.ts
-import { milvusClient } from './milvus-client';
+import { milvusClient } from './milvus-service';
 import { DataType } from '@zilliz/milvus2-sdk-node';
 
 /**
@@ -10,7 +10,7 @@ export async function collectionExists(collectionName: string): Promise<boolean>
     const response = await milvusClient.hasCollection({
       collection_name: collectionName
     });
-    return response.value;
+    return Boolean(response.value);
   } catch (error) {
     console.error(`Error checking collection ${collectionName}:`, error);
     return false;
