@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.41",
     "@supabase/supabase-js": "^2.49.1",
     "@zilliz/milvus2-sdk-node": "^2.5.5",
     "autoprefixer": "^10.4.20",
@@ -16,6 +17,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "langchain": "^0.3.19",
     "lucide-react": "^0.476.0",
     "next": "15.2.0",
     "postcss": "^8.5.3",
