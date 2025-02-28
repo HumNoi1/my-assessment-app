@@ -1,101 +1,134 @@
-import Image from "next/image";
+// src/app/page.tsx
+import Layout from "@/components/ui/Layout";
+import Link from 'next/link';
+import { FileText, Book, Users, Calendar } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <Layout>
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">ยินดีต้อนรับสู่ระบบผู้ช่วยตรวจข้อสอบอัตนัย</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatsCard 
+            title="ชั้นเรียน" 
+            value="5" 
+            icon={<Users size={24} className="text-blue-500" />} 
+            change="+2 เพิ่มเติม" 
+            isIncrease={true} 
+          />
+          <StatsCard 
+            title="วิชาเรียน" 
+            value="12" 
+            icon={<Book size={24} className="text-green-500" />} 
+            change="+3 เพิ่มเติม" 
+            isIncrease={true} 
+          />
+          <StatsCard 
+            title="เทอมเรียน" 
+            value="2" 
+            icon={<Calendar size={24} className="text-purple-500" />} 
+            change="ปัจจุบัน" 
+            isIncrease={false} 
+          />
+          <StatsCard 
+            title="ไฟล์คำตอบ" 
+            value="87" 
+            icon={<FileText size={24} className="text-orange-500" />} 
+            change="+15 ไฟล์ใหม่" 
+            isIncrease={true} 
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">งานตรวจล่าสุด</h2>
+            <div className="space-y-4">
+              {recentAssessments.map((assessment, index) => (
+                <div key={index} className="flex items-center p-3 border-b last:border-b-0">
+                  <div className="w-10 h-10 rounded bg-indigo-100 flex items-center justify-center mr-4">
+                    <FileText size={20} className="text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{assessment.name}</p>
+                    <p className="text-sm text-gray-500">{assessment.subject} • {assessment.date}</p>
+                  </div>
+                  <div className={`text-sm font-medium ${assessment.status === 'ตรวจแล้ว' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {assessment.status}
+                  </div>
+                </div>
+              ))}
+              <Link href="/answers" className="block text-center text-indigo-600 hover:text-indigo-800 mt-4">
+                ดูทั้งหมด
+              </Link>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">คะแนนเฉลี่ยรายวิชา</h2>
+            <div className="space-y-4">
+              {subjectScores.map((subject, index) => (
+                <div key={index} className="mb-4">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium">{subject.name}</span>
+                    <span className="font-medium">{subject.score}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-indigo-600 h-2 rounded-full" 
+                      style={{ width: `${subject.score}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+              <Link href="/subjects" className="block text-center text-indigo-600 hover:text-indigo-800 mt-4">
+                ดูทั้งหมด
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+// Component สำหรับแสดงการ์ดสถิติ
+interface StatsCardProps {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  change: string;
+  isIncrease: boolean;
+}
+
+function StatsCard({ title, value, icon, change, isIncrease }: StatsCardProps) {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-medium text-gray-700">{title}</h3>
+        {icon}
+      </div>
+      <p className="text-3xl font-bold">{value}</p>
+      <div className={`mt-2 flex items-center text-sm ${isIncrease ? 'text-green-600' : 'text-gray-500'}`}>
+        {change}
+      </div>
     </div>
   );
 }
+
+// ข้อมูลตัวอย่างสำหรับงานตรวจล่าสุด
+const recentAssessments = [
+  { name: 'แบบฝึกหัด 3 - ภาษาไทย', subject: 'ภาษาไทย', date: '28 ก.พ. 2025', status: 'ตรวจแล้ว' },
+  { name: 'แบบทดสอบกลางภาค', subject: 'คณิตศาสตร์', date: '27 ก.พ. 2025', status: 'ตรวจแล้ว' },
+  { name: 'รายงานวิทยาศาสตร์', subject: 'วิทยาศาสตร์', date: '25 ก.พ. 2025', status: 'รอตรวจ' },
+  { name: 'เรียงความภาษาอังกฤษ', subject: 'ภาษาอังกฤษ', date: '23 ก.พ. 2025', status: 'ตรวจแล้ว' },
+];
+
+// ข้อมูลตัวอย่างสำหรับคะแนนเฉลี่ยรายวิชา
+const subjectScores = [
+  { name: 'ภาษาไทย', score: 85 },
+  { name: 'คณิตศาสตร์', score: 78 },
+  { name: 'วิทยาศาสตร์', score: 92 },
+  { name: 'ภาษาอังกฤษ', score: 75 },
+  { name: 'สังคมศึกษา', score: 88 },
+];
