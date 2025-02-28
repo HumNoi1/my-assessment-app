@@ -47,6 +47,10 @@ export async function createAnswerKeyEmbeddingsCollection(): Promise<boolean> {
           max_length: 36
         },
         {
+          name: 'chunk_id',
+          data_type: DataType.Int64
+        },
+        {
           name: 'content_chunk',
           data_type: DataType.VarChar,
           max_length: 65535
@@ -111,6 +115,10 @@ export async function createStudentAnswerEmbeddingsCollection(): Promise<boolean
           name: 'student_answer_id',
           data_type: DataType.VarChar,
           max_length: 36
+        },
+        {
+          name: 'chunk_id',
+          data_type: DataType.Int64
         },
         {
           name: 'content_chunk',

@@ -1,11 +1,19 @@
 // assessment-backend/src/api/routes/student-answer-routes.ts
 import { Router } from 'express';
 import { supabase } from '../../services/supabase/client';
-import { uploadFile } from '../../services/supabase/file-service';
-import { StudentAnswer, CreateStudentAnswerDto } from '../../types';
-import { lmStudioService } from '../../services/llm/lmstudio-service';
+import multer from 'multer';
+import { studentAnswerProcessor } from '../../services/processors/student-answer-processor';
 
 const router = Router();
+
+// กำหนดค่า multer สำหรับการรับไฟล์
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // จำกัดขนาดไฟล์ 10MB
+  }
+});
 
 // Get all student answers
 router.get('/', async (req, res) => {
@@ -126,95 +134,44 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create new student answer
-router.post('/', async (req, res) => {
+// Create new student answer with file upload
+router.post('/', upload.single('file'), async (req, res) => {
   try {
-    const studentAnswerData: CreateStudentAnswerDto = req.body;
+    const { student_id, answer_key_id, folder_id, content } = req.body;
     
     // Validate required fields
-    if (!studentAnswerData.file_name || !studentAnswerData.content ||
-        !studentAnswerData.student_id || !studentAnswerData.answer_key_id ||
-        !studentAnswerData.folder_id) {
+    if (!student_id || !answer_key_id || !folder_id || !content) {
       return res.status(400).json({ 
-        error: 'File name, content, student ID, answer key ID, and folder ID are required' 
+        error: 'Student ID, answer key ID, folder ID, and content are required' 
       });
     }
     
-    // Check if student exists
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('student_id')
-      .eq('student_id', studentAnswerData.student_id)
-      .single();
+    let file, fileName, contentType;
     
-    if (studentError || !studentData) {
-      return res.status(400).json({ error: 'Student not found' });
-    }
-    
-    // Check if answer key exists
-    const { data: answerKeyData, error: answerKeyError } = await supabase
-      .from('answer_keys')
-      .select('answer_key_id')
-      .eq('answer_key_id', studentAnswerData.answer_key_id)
-      .single();
-    
-    if (answerKeyError || !answerKeyData) {
-      return res.status(400).json({ error: 'Answer key not found' });
-    }
-    
-    // Check if folder exists
-    const { data: folderData, error: folderError } = await supabase
-      .from('folders')
-      .select('folder_id')
-      .eq('folder_id', studentAnswerData.folder_id)
-      .single();
-    
-    if (folderError || !folderData) {
-      return res.status(400).json({ error: 'Folder not found' });
-    }
-    
-    // If file data is provided, upload to storage
+    // ถ้ามีการอัปโหลดไฟล์
     if (req.file) {
-      const fileBuffer = req.file.buffer;
-      const filePath = `student_answers/${studentAnswerData.folder_id}/${Date.now()}_${req.file.originalname}`;
-      
-      await uploadFile('student_answers', filePath, fileBuffer, req.file.mimetype);
-      
-      // Set file information
-      studentAnswerData.file_path = filePath;
-      studentAnswerData.file_size = req.file.size;
-      studentAnswerData.file_type = req.file.mimetype;
+      file = req.file.buffer;
+      fileName = req.file.originalname;
+      contentType = req.file.mimetype;
+    } else {
+      // ถ้าไม่มีไฟล์ ใช้ชื่อไฟล์จาก body หรือชื่อเริ่มต้น
+      fileName = req.body.file_name || `student_answer_${Date.now()}.txt`;
+      contentType = 'text/plain';
+      file = Buffer.from(content);
     }
     
-    // Generate collection name for embeddings
-    studentAnswerData.milvus_collection_name = `student_answer_${Date.now()}`;
+    // ใช้ processor เพื่ออัปโหลดและประมวลผลคำตอบนักเรียน
+    const studentAnswer = await studentAnswerProcessor.uploadAndProcessStudentAnswer(
+      file,
+      fileName,
+      content,
+      student_id,
+      answer_key_id,
+      folder_id,
+      contentType
+    );
     
-    // Insert new student answer
-    const { data, error } = await supabase
-      .from('student_answers')
-      .insert(studentAnswerData)
-      .select(`
-        *,
-        student:students(*),
-        answer_key:answer_keys(*),
-        folder:folders(*)
-      `);
-    
-    if (error) throw error;
-    
-    const newStudentAnswer = data[0];
-    
-    // Trigger async process to generate embeddings
-    try {
-      const embeddings = await lmStudioService.generateEmbeddings(studentAnswerData.content);
-      console.log(`Generated ${embeddings.length} embedding dimensions for student answer ${newStudentAnswer.student_answer_id}`);
-      // Store embeddings in Milvus would happen here
-    } catch (embeddingError) {
-      console.error('Error generating embeddings:', embeddingError);
-      // Log error but don't fail the request
-    }
-    
-    res.status(201).json(newStudentAnswer);
+    res.status(201).json(studentAnswer);
   } catch (error) {
     console.error('Error creating student answer:', error);
     res.status(500).json({ error: 'Failed to create student answer' });
@@ -225,11 +182,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const studentAnswerData: Partial<StudentAnswer> = req.body;
+    const updateData = req.body;
     
     // Remove immutable fields if present
-    delete studentAnswerData.student_answer_id;
-    delete studentAnswerData.created_at;
+    delete updateData.student_answer_id;
+    delete updateData.created_at;
+    delete updateData.file_path;
+    delete updateData.milvus_collection_name;
     
     // Check if student answer exists
     const { data: existingStudentAnswer, error: checkError } = await supabase
@@ -244,75 +203,31 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Student answer not found' });
     }
     
-    // Check relations if changed
-    if (studentAnswerData.student_id && studentAnswerData.student_id !== existingStudentAnswer.student_id) {
-      const { data: studentData, error: studentError } = await supabase
-        .from('students')
-        .select('student_id')
-        .eq('student_id', studentAnswerData.student_id)
-        .single();
-      
-      if (studentError || !studentData) {
-        return res.status(400).json({ error: 'Student not found' });
-      }
-    }
-    
-    if (studentAnswerData.answer_key_id && studentAnswerData.answer_key_id !== existingStudentAnswer.answer_key_id) {
-      const { data: answerKeyData, error: answerKeyError } = await supabase
-        .from('answer_keys')
-        .select('answer_key_id')
-        .eq('answer_key_id', studentAnswerData.answer_key_id)
-        .single();
-      
-      if (answerKeyError || !answerKeyData) {
-        return res.status(400).json({ error: 'Answer key not found' });
-      }
-    }
-    
-    if (studentAnswerData.folder_id && studentAnswerData.folder_id !== existingStudentAnswer.folder_id) {
-      const { data: folderData, error: folderError } = await supabase
-        .from('folders')
-        .select('folder_id')
-        .eq('folder_id', studentAnswerData.folder_id)
-        .single();
-      
-      if (folderError || !folderData) {
-        return res.status(400).json({ error: 'Folder not found' });
-      }
-    }
-    
-    // Check if content is changed
-    const contentChanged = studentAnswerData.content && studentAnswerData.content !== existingStudentAnswer.content;
+    // Check if content is changed - will need to process embeddings again
+    const contentChanged = updateData.content && updateData.content !== existingStudentAnswer.content;
     
     // Update student answer
     const { data, error } = await supabase
       .from('student_answers')
-      .update(studentAnswerData)
+      .update({
+        ...updateData,
+        processed: contentChanged ? false : existingStudentAnswer.processed,
+        updated_at: new Date().toISOString()
+      })
       .eq('student_answer_id', id)
-      .select(`
-        *,
-        student:students(*),
-        answer_key:answer_keys(*),
-        folder:folders(*)
-      `);
+      .select()
+      .single();
     
     if (error) throw error;
     
-    const updatedStudentAnswer = data[0];
-    
-    // If content changed, regenerate embeddings
+    // If content changed, process embeddings again asynchronously
     if (contentChanged) {
-      try {
-        const embeddings = await lmStudioService.generateEmbeddings(updatedStudentAnswer.content);
-        console.log(`Updated embeddings for student answer ${updatedStudentAnswer.student_answer_id}`);
-        // Update embeddings in Milvus would happen here
-      } catch (embeddingError) {
-        console.error('Error updating embeddings:', embeddingError);
-        // Log error but don't fail the request
-      }
+      studentAnswerProcessor.processStudentAnswer(id).catch(err => {
+        console.error('Error processing updated student answer:', err);
+      });
     }
     
-    res.json(updatedStudentAnswer);
+    res.json(data);
   } catch (error) {
     console.error('Error updating student answer:', error);
     res.status(500).json({ error: 'Failed to update student answer' });
@@ -371,12 +286,45 @@ router.delete('/:id', async (req, res) => {
       }
     }
     
-    // Cleanup embeddings in Milvus would happen here
+    // TODO: Cleanup in Milvus collection if needed
+    // ตัดส่วนนี้ออกไปเพราะยังไม่มีการทำ cleanup ใน Milvus
     
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting student answer:', error);
     res.status(500).json({ error: 'Failed to delete student answer' });
+  }
+});
+
+// Process student answer embeddings manually
+router.post('/:id/process', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if student answer exists
+    const { data: existingStudentAnswer, error: checkError } = await supabase
+      .from('student_answers')
+      .select('*')
+      .eq('student_answer_id', id)
+      .maybeSingle();
+    
+    if (checkError) throw checkError;
+    
+    if (!existingStudentAnswer) {
+      return res.status(404).json({ error: 'Student answer not found' });
+    }
+    
+    // Process embeddings
+    const success = await studentAnswerProcessor.processStudentAnswer(id);
+    
+    if (success) {
+      res.json({ message: 'Student answer processed successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to process student answer' });
+    }
+  } catch (error) {
+    console.error('Error processing student answer:', error);
+    res.status(500).json({ error: 'Failed to process student answer' });
   }
 });
 

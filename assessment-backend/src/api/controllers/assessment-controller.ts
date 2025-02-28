@@ -37,9 +37,14 @@ export class AssessmentController {
       );
       
       res.json(assessment);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error analyzing answer:', error);
-      res.status(500).json({ error: error.message || 'Failed to analyze answer' });
+
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message || 'Failed to analyze answer' });
+      } else {
+        res.status(500).json({ error: 'Failed to analyze answer' });
+      }
     }
   }
   
@@ -76,9 +81,14 @@ export class AssessmentController {
       );
       
       res.json(comparison);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error comparing answers:', error);
-      res.status(500).json({ error: error.message || 'Failed to compare answers' });
+
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message || 'Failed to compare answers' });
+      } else {
+        res.status(500).json({ error: 'Failed to compare answers' });
+      }
     }
   }
   
@@ -111,9 +121,14 @@ export class AssessmentController {
       if (error) throw error;
       
       res.json(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error approving assessment:', error);
-      res.status(500).json({ error: error.message || 'Failed to approve assessment' });
+
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message || 'Failed to approve assessment' });
+      } else {
+        res.status(500).json({ error: 'Failed to approve assessment' });
+      }
     }
   }
   
@@ -148,9 +163,14 @@ export class AssessmentController {
       }
       
       res.json(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching assessment:', error);
-      res.status(500).json({ error: error.message || 'Failed to fetch assessment' });
+
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message || 'Failed to fetch assessment' });
+      } else {
+        res.status(500).json({ error: 'Failed to fetch assessment' });
+      }
     }
   }
   
@@ -212,9 +232,14 @@ export class AssessmentController {
       if (error) throw error;
       
       res.json(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching assessments:', error);
-      res.status(500).json({ error: error.message || 'Failed to fetch assessments' });
+
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message || 'Failed to fetch assessments' });
+      } else {
+        res.status(500).json({ error: 'Failed to fetch assessments' });
+      }
     }
   }
 }

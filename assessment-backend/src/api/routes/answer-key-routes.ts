@@ -1,11 +1,19 @@
 // assessment-backend/src/api/routes/answer-key-routes.ts
 import { Router } from 'express';
 import { supabase } from '../../services/supabase/client';
-import { uploadFile } from '../../services/supabase/file-service';
-import { AnswerKey, CreateAnswerKeyDto } from '../../types';
-import { lmStudioService } from '../../services/llm/lmstudio-service';
+import multer from 'multer';
+import { answerKeyProcessor } from '../../services/processors/amswer-key-processor';
 
 const router = Router();
+
+// กำหนดค่า multer สำหรับการรับไฟล์
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // จำกัดขนาดไฟล์ 10MB
+  }
+});
 
 // Get all answer keys
 router.get('/', async (req, res) => {
@@ -99,84 +107,43 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create new answer key
-router.post('/', async (req, res) => {
+// Create new answer key with file upload
+router.post('/', upload.single('file'), async (req, res) => {
   try {
-    const answerKeyData: CreateAnswerKeyDto = req.body;
+    const { subject_id, term_id, content } = req.body;
     
     // Validate required fields
-    if (!answerKeyData.file_name || !answerKeyData.content || 
-        !answerKeyData.subject_id || !answerKeyData.term_id) {
+    if (!subject_id || !term_id || !content) {
       return res.status(400).json({ 
-        error: 'File name, content, subject ID, and term ID are required' 
+        error: 'Subject ID, term ID, and content are required' 
       });
     }
     
-    // Check if subject exists
-    const { data: subjectData, error: subjectError } = await supabase
-      .from('subjects')
-      .select('subject_id')
-      .eq('subject_id', answerKeyData.subject_id)
-      .single();
+    let file, fileName, contentType;
     
-    if (subjectError || !subjectData) {
-      return res.status(400).json({ error: 'Subject not found' });
-    }
-    
-    // Check if term exists
-    const { data: termData, error: termError } = await supabase
-      .from('terms')
-      .select('term_id')
-      .eq('term_id', answerKeyData.term_id)
-      .single();
-    
-    if (termError || !termData) {
-      return res.status(400).json({ error: 'Term not found' });
-    }
-    
-    // If file data is provided, upload to storage
+    // ถ้ามีการอัปโหลดไฟล์
     if (req.file) {
-      const fileBuffer = req.file.buffer;
-      const filePath = `answer_keys/${answerKeyData.subject_id}/${Date.now()}_${req.file.originalname}`;
-      
-      await uploadFile('answer_keys', filePath, fileBuffer, req.file.mimetype);
-      
-      // Set file information
-      answerKeyData.file_path = filePath;
-      answerKeyData.file_size = req.file.size;
-      answerKeyData.file_type = req.file.mimetype;
+      file = req.file.buffer;
+      fileName = req.file.originalname;
+      contentType = req.file.mimetype;
+    } else {
+      // ถ้าไม่มีไฟล์ ใช้ชื่อไฟล์จาก body หรือชื่อเริ่มต้น
+      fileName = req.body.file_name || `answer_key_${Date.now()}.txt`;
+      contentType = 'text/plain';
+      file = Buffer.from(content);
     }
     
-    // Generate collection name for embeddings
-    answerKeyData.milvus_collection_name = `answer_key_${Date.now()}`;
+    // ใช้ processor เพื่ออัปโหลดและประมวลผลไฟล์เฉลย
+    const answerKey = await answerKeyProcessor.uploadAndProcessAnswerKey(
+      file,
+      fileName,
+      content,
+      subject_id,
+      term_id,
+      contentType
+    );
     
-    // Insert new answer key
-    const { data, error } = await supabase
-      .from('answer_keys')
-      .insert(answerKeyData)
-      .select(`
-        *,
-        subject:subjects(*),
-        term:terms(*)
-      `);
-    
-    if (error) throw error;
-    
-    const newAnswerKey = data[0];
-    
-    // Trigger async process to generate embeddings
-    // This would typically be done in a background job
-    // For simplicity, we're starting it here but not awaiting completion
-    try {
-      const embeddings = await lmStudioService.generateEmbeddings(answerKeyData.content);
-      console.log(`Generated ${embeddings.length} embedding dimensions for answer key ${newAnswerKey.answer_key_id}`);
-      // Store embeddings in Milvus would happen here
-    } catch (embeddingError) {
-      console.error('Error generating embeddings:', embeddingError);
-      // Log error but don't fail the request
-    }
-    
-    res.status(201).json(newAnswerKey);
+    res.status(201).json(answerKey);
   } catch (error) {
     console.error('Error creating answer key:', error);
     res.status(500).json({ error: 'Failed to create answer key' });
@@ -187,11 +154,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const answerKeyData: Partial<AnswerKey> = req.body;
+    const updateData = req.body;
     
     // Remove immutable fields if present
-    delete answerKeyData.answer_key_id;
-    delete answerKeyData.created_at;
+    delete updateData.answer_key_id;
+    delete updateData.created_at;
+    delete updateData.file_path;
+    delete updateData.milvus_collection_name;
     
     // Check if answer key exists
     const { data: existingAnswerKey, error: checkError } = await supabase
@@ -206,62 +175,31 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Answer key not found' });
     }
     
-    // Check relations if changed
-    if (answerKeyData.subject_id && answerKeyData.subject_id !== existingAnswerKey.subject_id) {
-      const { data: subjectData, error: subjectError } = await supabase
-        .from('subjects')
-        .select('subject_id')
-        .eq('subject_id', answerKeyData.subject_id)
-        .single();
-      
-      if (subjectError || !subjectData) {
-        return res.status(400).json({ error: 'Subject not found' });
-      }
-    }
-    
-    if (answerKeyData.term_id && answerKeyData.term_id !== existingAnswerKey.term_id) {
-      const { data: termData, error: termError } = await supabase
-        .from('terms')
-        .select('term_id')
-        .eq('term_id', answerKeyData.term_id)
-        .single();
-      
-      if (termError || !termData) {
-        return res.status(400).json({ error: 'Term not found' });
-      }
-    }
-    
-    // If content is changed, we would need to regenerate embeddings
-    const contentChanged = answerKeyData.content && answerKeyData.content !== existingAnswerKey.content;
+    // Check if content is changed - will need to process embeddings again
+    const contentChanged = updateData.content && updateData.content !== existingAnswerKey.content;
     
     // Update answer key
     const { data, error } = await supabase
       .from('answer_keys')
-      .update(answerKeyData)
+      .update({
+        ...updateData,
+        processed: contentChanged ? false : existingAnswerKey.processed,
+        updated_at: new Date().toISOString()
+      })
       .eq('answer_key_id', id)
-      .select(`
-        *,
-        subject:subjects(*),
-        term:terms(*)
-      `);
+      .select()
+      .single();
     
     if (error) throw error;
     
-    const updatedAnswerKey = data[0];
-    
-    // If content changed, regenerate embeddings
+    // If content changed, process embeddings again asynchronously
     if (contentChanged) {
-      try {
-        const embeddings = await lmStudioService.generateEmbeddings(updatedAnswerKey.content);
-        console.log(`Updated embeddings for answer key ${updatedAnswerKey.answer_key_id}`);
-        // Update embeddings in Milvus would happen here
-      } catch (embeddingError) {
-        console.error('Error updating embeddings:', embeddingError);
-        // Log error but don't fail the request
-      }
+      answerKeyProcessor.processAnswerKey(id).catch(err => {
+        console.error('Error processing updated answer key:', err);
+      });
     }
     
-    res.json(updatedAnswerKey);
+    res.json(data);
   } catch (error) {
     console.error('Error updating answer key:', error);
     res.status(500).json({ error: 'Failed to update answer key' });
@@ -320,12 +258,45 @@ router.delete('/:id', async (req, res) => {
       }
     }
     
-    // Cleanup embeddings in Milvus would happen here
+    // TODO: Cleanup in Milvus collection if needed
+    // ตัดส่วนนี้ออกไปเพราะยังไม่มีการทำ cleanup ใน Milvus
     
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting answer key:', error);
     res.status(500).json({ error: 'Failed to delete answer key' });
+  }
+});
+
+// Process answer key embeddings manually
+router.post('/:id/process', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if answer key exists
+    const { data: existingAnswerKey, error: checkError } = await supabase
+      .from('answer_keys')
+      .select('*')
+      .eq('answer_key_id', id)
+      .maybeSingle();
+    
+    if (checkError) throw checkError;
+    
+    if (!existingAnswerKey) {
+      return res.status(404).json({ error: 'Answer key not found' });
+    }
+    
+    // Process embeddings
+    const success = await answerKeyProcessor.processAnswerKey(id);
+    
+    if (success) {
+      res.json({ message: 'Answer key processed successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to process answer key' });
+    }
+  } catch (error) {
+    console.error('Error processing answer key:', error);
+    res.status(500).json({ error: 'Failed to process answer key' });
   }
 });
 

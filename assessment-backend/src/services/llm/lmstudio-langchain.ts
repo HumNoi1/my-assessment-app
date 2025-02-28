@@ -1,5 +1,5 @@
 // assessment-backend/src/services/llm/lmstudio-langchain.ts
-import { LLM } from "langchain/llms/base";
+import { LLM } from "@langchain/core/language_models/llms";
 import { LMStudioService } from "./lmstudio-service";
 
 /**

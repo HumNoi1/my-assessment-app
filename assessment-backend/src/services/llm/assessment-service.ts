@@ -1,7 +1,7 @@
 // assessment-backend/src/services/llm/enhanced-assessment-service.ts
 import { LLMChain } from "langchain/chains";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { BaseLanguageModel } from "langchain/base_language";
+import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { supabase } from "../supabase/client";
 import { embeddingService } from "../vector-db/embedding-service";
 import { lmStudioService } from "./lmstudio-service";
@@ -9,6 +9,7 @@ import { LMStudioLLM } from "./lmstudio-langchain";
 
 export class AssessmentService {
   private llm: BaseLanguageModel;
+  private confidence: number = 0;
   
   constructor() {
     // ใช้ LMStudio เป็น LLM ในระบบ LangChain
@@ -92,7 +93,7 @@ export class AssessmentService {
       await this.logLLMUsage(
         assessment.assessment_id,
         'analyze_answer',
-        promptTemplate.format({
+        await promptTemplate.format({
           answerKey: relevantKeyChunks.join("\n"),
           studentAnswer: studentAnswer.content
         }),
@@ -248,7 +249,8 @@ export class AssessmentService {
           output_text: outputText,
           processing_time: 1.0, // ตั้งค่าเริ่มต้น
           token_count: this.estimateTokenCount(inputPrompt) + this.estimateTokenCount(outputText),
-          assessment_id: assessmentId
+          assessment_id: assessmentId,
+          confidence: confidence
         });
     } catch (error) {
       console.error('Error logging LLM usage:', error);
@@ -330,7 +332,7 @@ export class AssessmentService {
       await this.logLLMUsage(
         "none", // ไม่เชื่อมโยงกับการประเมินโดยตรง
         'compare_answers',
-        promptTemplate.format({
+        await promptTemplate.format({
           answerKey: answerKey.content,
           studentAnswer: studentAnswer.content
         }),
